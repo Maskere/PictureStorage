@@ -1,0 +1,63 @@
+namespace PictureStorage;
+
+public class ImageRepository : IImageRepository{
+    private List<ImageData> images;
+
+    public ImageRepository(){
+        images = new();
+    }
+
+    public int Add(string? filePath, string? pictureName){
+        ImageData toAdd = new(filePath,pictureName);
+        images.Add(toAdd);
+        return 1;
+    }
+
+    public List<string>? GetAll(int pageNumber, int pageSize){
+        List<string> res = new();
+        foreach(ImageData imageData in images.GetRange(pageNumber,pageSize)){
+            if(imageData.PictureName != null)
+                res.Add(imageData.PictureName);
+        }
+        return new List<string>(res);
+    }
+
+    public List<string>? GetTop(int top){
+        List<string> ret = new();
+        foreach(ImageData id in images.GetRange(0,top)){
+            if(id.FilePath != null)
+                ret.Add(id.FilePath);
+        }
+        if(ret.Count <= 0) return null;
+        return ret;
+    }
+
+    public ImageData? GetById(int id){
+        int left = 0;
+        int right = images.Count - 1;
+
+        while(left <= right){
+            int mid = left + (right - left) / 2;
+            if(images[mid].Id == id){
+                return images[mid];
+            }
+            else if(images[mid].Id < id){
+                left = mid + 1;
+            }
+            else{
+                right = mid - 1;
+            }
+        }
+
+        return null;
+    }
+
+    public int Remove(int id){
+        ImageData? toRemove = GetById(id);
+        if(toRemove == null) return -1;
+
+        images.Remove(toRemove);
+        return 1;
+    }
+
+}

@@ -1,0 +1,6 @@
+@PictureStorage_HostAddress = http://0.0.0.0:5257
+
+GET {{PictureStorage_HostAddress}}/api/pictures
+Accept: application/json
+
+###

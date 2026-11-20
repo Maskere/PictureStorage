@@ -1,0 +1,4 @@
+Picture-api.service
+nginx 
+    /var/www/picture-storage-app
+    /etc/nginx/sites-enabled/default
