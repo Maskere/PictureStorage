@@ -91,6 +91,7 @@ public class PicturesController : ControllerBase {
         try{
             if(!Directory.Exists(s_fsDestination)) Directory.CreateDirectory(s_fsDestination);
 
+            List<(string? FilePath, string? PictureName)> savedFiles = new();
             foreach(IFormFile f in files){
                 string safeFileName = Path.GetFileName(f.FileName);
                 if(safeFileName.StartsWith(".") || safeFileName.Equals(".database_uuid",StringComparison.OrdinalIgnoreCase)){
@@ -102,8 +103,10 @@ public class PicturesController : ControllerBase {
                     await f.CopyToAsync(stream);
                 }
 
-                imageRepository.Add(savePath, safeFileName);
+                savedFiles.Add((savePath, safeFileName));
             }
+
+            imageRepository.AddRange(savedFiles);
 
             // Console.WriteLine($"Saved {files.Count} files");
 

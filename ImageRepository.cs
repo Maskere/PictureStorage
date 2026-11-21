@@ -13,6 +13,14 @@ public class ImageRepository : IImageRepository{
         return 1;
     }
 
+    public int AddRange(IEnumerable<(string? FilePath, string? PictureName)> items){
+        int added = 0;
+        foreach(var item in items){
+            added += Add(item.FilePath, item.PictureName);
+        }
+        return added;
+    }
+
     public List<string>? GetAll(int pageNumber, int pageSize){
         List<string> res = new();
         foreach(ImageData imageData in images.GetRange(pageNumber,pageSize)){

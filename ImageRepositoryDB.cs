@@ -71,6 +71,38 @@ public sealed class ImageRepositoryDB(string connectionString, string uploadsRoo
         return command.ExecuteNonQuery();
     }
 
+    public int AddRange(IEnumerable<(string? FilePath, string? PictureName)> images)
+    {
+        var items = images.ToArray();
+        if (items.Length == 0) return 0;
+
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        var inserted = 0;
+
+        foreach (var batch in items.Chunk(500))
+        {
+            var values = new List<string>(batch.Length);
+            using var command = new NpgsqlCommand { Connection = connection, Transaction = transaction };
+
+            for (var i = 0; i < batch.Length; i++)
+            {
+                var filePathParameter = $"file_path_{i}";
+                var fileNameParameter = $"filename_{i}";
+                values.Add($"(@{filePathParameter}, @{fileNameParameter})");
+                command.Parameters.AddWithValue(filePathParameter, (object?)batch[i].FilePath ?? DBNull.Value);
+                command.Parameters.AddWithValue(fileNameParameter, (object?)batch[i].PictureName ?? DBNull.Value);
+            }
+
+            command.CommandText = $"INSERT INTO pictures (file_path, filename) VALUES {string.Join(", ", values)}";
+            inserted += command.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+        return inserted;
+    }
+
     public ImageData? GetById(int id)
     {
         const string sql = "SELECT id, file_path, filename FROM pictures WHERE id = @id";
