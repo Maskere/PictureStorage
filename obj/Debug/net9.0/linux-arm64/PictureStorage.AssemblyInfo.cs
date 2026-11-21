@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PictureStorage")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fb4be629c5ef596f7d842f93674190a5cafe2d75")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a03d1350b894267210fbcdde471452aa0913468e")]
 [assembly: System.Reflection.AssemblyProductAttribute("PictureStorage")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PictureStorage")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

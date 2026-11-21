@@ -32,6 +32,7 @@ public class Program {
         
         builder.Services.AddScoped<IImageRepository>(_ => new ImageRepositoryDB(connectionString, s_fsDestination));
         builder.Services.AddSingleton(new ThumbnailService(s_fsDestination, thumbnailFolder));
+        builder.Services.AddHostedService<CaptureDateBackfillService>();
 
         builder.Services.Configure<FormOptions>(options =>{
                 options.MultipartBodyLengthLimit = MaxRequestBodySize;

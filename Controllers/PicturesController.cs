@@ -22,14 +22,17 @@ public class PicturesController : ControllerBase {
     public ActionResult<IEnumerable<string>> Get(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 20,
-        [FromQuery] string? search = null,
-        [FromQuery] string mediaType = "all"){
+        [FromQuery] string mediaType = "all",
+        [FromQuery] string sortOrder = "newest"){
         mediaType = mediaType.ToLowerInvariant();
+        sortOrder = sortOrder.ToLowerInvariant();
         if (mediaType is not ("all" or "images" or "videos"))
             return BadRequest("mediaType must be 'all', 'images', or 'videos'.");
+        if (sortOrder is not ("newest" or "oldest"))
+            return BadRequest("sortOrder must be 'newest' or 'oldest'.");
 
         pageSize = Math.Clamp(pageSize, 1, 100);
-        List<string>? ret = imageRepository.GetAll(pageNumber, pageSize, search, mediaType);
+        List<string>? ret = imageRepository.GetAll(pageNumber, pageSize, mediaType, sortOrder);
         if(ret == null) return NoContent();
         if(ret.Count <= 0) return NoContent();
         return Ok(ret);
@@ -93,7 +96,7 @@ public class PicturesController : ControllerBase {
 
             try{
                 // ImageData imageData = new(savePath,myPic.FileName);
-                int res = imageRepository.Add(savePath,safeFileName);
+                int res = imageRepository.Add(savePath, safeFileName, CaptureDateService.Read(savePath));
             }
             catch(ArgumentException ex){
                 return BadRequest(ex.Message);
@@ -126,7 +129,7 @@ public class PicturesController : ControllerBase {
         try{
             if(!Directory.Exists(s_fsDestination)) Directory.CreateDirectory(s_fsDestination);
 
-            List<(string? FilePath, string? PictureName)> savedFiles = new();
+            List<(string? FilePath, string? PictureName, DateTime? CapturedAt)> savedFiles = new();
             foreach(IFormFile f in files){
                 string safeFileName = Path.GetFileName(f.FileName);
                 if(safeFileName.StartsWith(".") || safeFileName.Equals(".database_uuid",StringComparison.OrdinalIgnoreCase)){
@@ -138,7 +141,7 @@ public class PicturesController : ControllerBase {
                     await f.CopyToAsync(stream);
                 }
 
-                savedFiles.Add((savePath, safeFileName));
+                savedFiles.Add((savePath, safeFileName, CaptureDateService.Read(savePath)));
             }
 
             imageRepository.AddRange(savedFiles);

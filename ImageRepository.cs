@@ -7,25 +7,23 @@ public class ImageRepository : IImageRepository{
         images = new();
     }
 
-    public int Add(string? filePath, string? pictureName){
+    public int Add(string? filePath, string? pictureName, DateTime? capturedAt = null){
         ImageData toAdd = new(filePath,pictureName);
         images.Add(toAdd);
         return 1;
     }
 
-    public int AddRange(IEnumerable<(string? FilePath, string? PictureName)> items){
+    public int AddRange(IEnumerable<(string? FilePath, string? PictureName, DateTime? CapturedAt)> items){
         int added = 0;
         foreach(var item in items){
-            added += Add(item.FilePath, item.PictureName);
+            added += Add(item.FilePath, item.PictureName, item.CapturedAt);
         }
         return added;
     }
 
-    public List<string>? GetAll(int pageNumber, int pageSize, string? searchTerm, string mediaType){
+    public List<string>? GetAll(int pageNumber, int pageSize, string mediaType, string sortOrder){
         List<string> res = new();
         IEnumerable<ImageData> filtered = images;
-        if (!string.IsNullOrWhiteSpace(searchTerm))
-            filtered = filtered.Where(image => image.PictureName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
         if (mediaType == "images")
             filtered = filtered.Where(image => IsImage(image.PictureName));
         else if (mediaType == "videos")
@@ -83,5 +81,8 @@ public class ImageRepository : IImageRepository{
         images.Remove(toRemove);
         return 1;
     }
+
+    public List<(int Id, string? FilePath, string? PictureName)> GetWithoutCaptureDate(int limit) => [];
+    public int UpdateCaptureDate(int id, DateTime? capturedAt) => 0;
 
 }
