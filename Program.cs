@@ -26,7 +26,7 @@ public class Program {
 
         builder.Services.AddAuthorization();
         
-        builder.Services.AddScoped<IImageRepository>(_ => new ImageRepositoryDB(connectionString));
+        builder.Services.AddScoped<IImageRepository>(_ => new ImageRepositoryDB(connectionString, s_fsDestination));
 
         builder.Services.Configure<FormOptions>(options =>{
                 options.MultipartBodyLengthLimit = 524288000;
@@ -37,6 +37,7 @@ public class Program {
                 });
 
 
+        Directory.CreateDirectory(s_fsDestination);
         var app = builder.Build();
         app.UseStaticFiles(new StaticFileOptions{
                 FileProvider = new PhysicalFileProvider(s_fsDestination),

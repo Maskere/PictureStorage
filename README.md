@@ -4,7 +4,7 @@ ASP.NET Core API for storing image files on disk and their metadata in PostgreSQ
 
 ## PostgreSQL setup
 
-Create the database and application user in PostgreSQL, then run `database/schema.sql` against that database. The API expects a `picturedata` table with `id`, `filepath`, and `picturename` columns.
+Create the database and application user in PostgreSQL, then run `database/schema.sql` against that database. The API expects a `pictures` table with `id`, `filename`, `file_path`, and `uploaded_at` columns.
 
 Configure the connection string outside the repository. For example, in PowerShell:
 
