@@ -1,25 +1,60 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
+using PictureStorage.Services;
+using ImageMagick;
 namespace PictureStorage;
 
 [Route("api/[controller]")]
 [ApiController]
 public class PicturesController : ControllerBase {
     private readonly string s_fsDestination;
-    private IImageRepository imageRepository;
+    private readonly IImageRepository imageRepository;
+    private readonly ThumbnailService thumbnailService;
 
-    public PicturesController(IImageRepository imageRepository, IConfiguration configuration){
+    public PicturesController(IImageRepository imageRepository, ThumbnailService thumbnailService, IConfiguration configuration){
         this.imageRepository = imageRepository;
+        this.thumbnailService = thumbnailService;
         s_fsDestination = Path.GetFullPath(configuration["MainFolder"]
             ?? throw new InvalidOperationException("MainFolder is not configured."));
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<ImageData>> Get([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20){
-        // List<string>? ret = imageRepository.GetTop(10);
-        List<string>? ret = imageRepository.GetAll(pageNumber,pageSize);
+    public ActionResult<IEnumerable<string>> Get(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? search = null,
+        [FromQuery] string mediaType = "all"){
+        mediaType = mediaType.ToLowerInvariant();
+        if (mediaType is not ("all" or "images" or "videos"))
+            return BadRequest("mediaType must be 'all', 'images', or 'videos'.");
+
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        List<string>? ret = imageRepository.GetAll(pageNumber, pageSize, search, mediaType);
         if(ret == null) return NoContent();
         if(ret.Count <= 0) return NoContent();
         return Ok(ret);
+    }
+
+    [HttpGet("thumbnail")]
+    public async Task<IActionResult> GetThumbnail([FromQuery] string path, CancellationToken cancellationToken){
+        if (string.IsNullOrWhiteSpace(path)) return BadRequest("A relative image path is required.");
+
+        try{
+            string thumbnailPath = await thumbnailService.GetOrCreateAsync(path, cancellationToken);
+            return PhysicalFile(thumbnailPath, "image/webp", enableRangeProcessing: true);
+        }
+        catch(FileNotFoundException){
+            return NotFound();
+        }
+        catch(NotSupportedException){
+            return StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        }
+        catch(ArgumentException ex){
+            return BadRequest(ex.Message);
+        }
+        catch(MagickException){
+            return StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        }
     }
 
     [HttpGet("{id}")]

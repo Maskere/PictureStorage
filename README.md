@@ -14,3 +14,5 @@ dotnet run --project .\PictureStorage.csproj
 ```
 
 On Linux or in a systemd service, set the same `ConnectionStrings__PostgresDB` environment variable in the service environment. `MainFolder` in `appsettings.json` sets the directory used for uploaded files and static file serving.
+
+Image thumbnails are generated on demand and cached outside `MainFolder`; originals are never changed. `ThumbnailFolder` can be set to choose another cache directory.

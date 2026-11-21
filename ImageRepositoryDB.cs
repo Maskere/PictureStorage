@@ -1,4 +1,5 @@
 using Npgsql;
+using NpgsqlTypes;
 
 namespace PictureStorage;
 
@@ -19,14 +20,28 @@ public sealed class ImageRepositoryDB(string connectionString, string uploadsRoo
             .ToDictionary(group => group.Key, group => group.First().RelativePath, comparer);
     });
 
-    public List<string>? GetAll(int pageNumber, int pageSize)
+    public List<string>? GetAll(int pageNumber, int pageSize, string? searchTerm, string mediaType)
     {
         if (pageNumber < 1 || pageSize < 1) return [];
 
-        const string sql = "SELECT file_path, filename FROM pictures ORDER BY filename LIMIT @limit OFFSET @offset";
+        const string sql = @"
+            SELECT file_path, filename
+            FROM pictures
+            WHERE (@search IS NULL OR filename ILIKE '%' || @search || '%')
+              AND (
+                    @mediaType = 'all'
+                    OR (@mediaType = 'images' AND lower(filename) ~ '\.(jpg|jpeg|png|gif|webp|bmp|tif|tiff|avif|heic)$')
+                    OR (@mediaType = 'videos' AND lower(filename) ~ '\.(mp4|webm|ogg|mov|m4v|avi|mkv|3gp|mpeg|mpg)$')
+              )
+            ORDER BY filename
+            LIMIT @limit OFFSET @offset";
         using var connection = new NpgsqlConnection(connectionString);
         connection.Open();
         using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.Add("search", NpgsqlDbType.Text).Value = string.IsNullOrWhiteSpace(searchTerm)
+            ? DBNull.Value
+            : searchTerm;
+        command.Parameters.AddWithValue("mediaType", mediaType);
         command.Parameters.AddWithValue("limit", pageSize);
         command.Parameters.AddWithValue("offset", (long)(pageNumber - 1) * pageSize);
 

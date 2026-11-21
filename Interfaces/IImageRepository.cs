@@ -4,7 +4,7 @@ public interface IImageRepository{
     int Add(string? filePath, string? pictureName);
     int AddRange(IEnumerable<(string? FilePath, string? PictureName)> images);
     List<string>? GetTop(int top);
-    List<string>? GetAll(int pageNumber, int pageSize);
+    List<string>? GetAll(int pageNumber, int pageSize, string? searchTerm, string mediaType);
     ImageData? GetById(int id);
     int Remove(int id);
 }

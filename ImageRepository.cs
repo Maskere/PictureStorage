@@ -21,14 +21,30 @@ public class ImageRepository : IImageRepository{
         return added;
     }
 
-    public List<string>? GetAll(int pageNumber, int pageSize){
+    public List<string>? GetAll(int pageNumber, int pageSize, string? searchTerm, string mediaType){
         List<string> res = new();
-        foreach(ImageData imageData in images.GetRange(pageNumber,pageSize)){
-            if(imageData.PictureName != null)
-                res.Add(imageData.PictureName);
+        IEnumerable<ImageData> filtered = images;
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+            filtered = filtered.Where(image => image.PictureName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true);
+        if (mediaType == "images")
+            filtered = filtered.Where(image => IsImage(image.PictureName));
+        else if (mediaType == "videos")
+            filtered = filtered.Where(image => IsVideo(image.PictureName));
+
+        foreach(ImageData imageData in filtered.Skip((pageNumber - 1) * pageSize).Take(pageSize)){
+            if(imageData.FilePath != null)
+                res.Add(imageData.FilePath);
         }
         return new List<string>(res);
     }
+
+    private static bool IsImage(string? name) => name != null &&
+        new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff", ".avif", ".heic" }
+            .Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsVideo(string? name) => name != null &&
+        new[] { ".mp4", ".webm", ".ogg", ".mov", ".m4v", ".avi", ".mkv", ".3gp", ".mpeg", ".mpg" }
+            .Contains(Path.GetExtension(name), StringComparer.OrdinalIgnoreCase);
 
     public List<string>? GetTop(int top){
         List<string> ret = new();

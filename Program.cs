@@ -1,9 +1,11 @@
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http.Features;
+using PictureStorage.Services;
 namespace PictureStorage;
 
 public class Program {
     private static string? s_fsDestination;
+    private const long MaxRequestBodySize = 2L * 1024 * 1024 * 1024;
 
     public static void Main(string[] args) {
         var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +15,8 @@ public class Program {
         string folder = builder.Configuration.GetValue<string>("MainFolder")
             ?? throw new InvalidOperationException("MainFolder is not configured.");
         s_fsDestination = Path.GetFullPath(folder);
+        string thumbnailFolder = Path.GetFullPath(builder.Configuration["ThumbnailFolder"]
+            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PictureStorage", "Thumbnails"));
 
         builder.Services.AddCors(options => {
                 options.AddPolicy("AllowAll", policy =>{
@@ -27,17 +31,19 @@ public class Program {
         builder.Services.AddAuthorization();
         
         builder.Services.AddScoped<IImageRepository>(_ => new ImageRepositoryDB(connectionString, s_fsDestination));
+        builder.Services.AddSingleton(new ThumbnailService(s_fsDestination, thumbnailFolder));
 
         builder.Services.Configure<FormOptions>(options =>{
-                options.MultipartBodyLengthLimit = 524288000;
+                options.MultipartBodyLengthLimit = MaxRequestBodySize;
                 });
 
         builder.WebHost.ConfigureKestrel(options =>{
-                options.Limits.MaxRequestBodySize = 524288000;
+                options.Limits.MaxRequestBodySize = MaxRequestBodySize;
                 });
 
 
         Directory.CreateDirectory(s_fsDestination);
+        Directory.CreateDirectory(thumbnailFolder);
         var app = builder.Build();
         app.UseStaticFiles(new StaticFileOptions{
                 FileProvider = new PhysicalFileProvider(s_fsDestination),
