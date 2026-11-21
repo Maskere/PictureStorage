@@ -1,18 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.Sqlite;
-using Npgsql;
 namespace PictureStorage;
 
 [Route("api/[controller]")]
 [ApiController]
 public class PicturesController : ControllerBase {
-    private string? connectionString;
-    private string s_fsDestination = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), "/mnt/data-ext42/Uploads/");
+    private readonly string s_fsDestination;
     private IImageRepository imageRepository;
 
-    public PicturesController(IImageRepository imageRepository){
+    public PicturesController(IImageRepository imageRepository, IConfiguration configuration){
         this.imageRepository = imageRepository;
-        this.connectionString = Program.connectionString;
+        s_fsDestination = Path.GetFullPath(configuration["MainFolder"]
+            ?? throw new InvalidOperationException("MainFolder is not configured."));
     }
 
     [HttpGet]
@@ -90,34 +88,11 @@ public class PicturesController : ControllerBase {
             return BadRequest("No file uploaded");
         }
 
-        // using SqliteConnection con = new(connectionString);
-        // con.Open();
-
-        string? s = "select picturename from picturedata where picturename = @check";
-        using SqliteCommand checkCmd = new(s,con);
-        checkCmd.Parameters.AddWithValue("@check",SqliteType.Text);
-
-        string? insert = "insert into picturedata values(null,@filePath,@pictureName)";
-        using SqliteCommand insertCmd = new(insert,con);
-        insertCmd.Parameters.AddWithValue("@filePath",SqliteType.Text);
-        insertCmd.Parameters.AddWithValue("@pictureName",SqliteType.Text);
-
         try{
             if(!Directory.Exists(s_fsDestination)) Directory.CreateDirectory(s_fsDestination);
 
             foreach(IFormFile f in files){
-                // Console.WriteLine(f.FileName);
-                checkCmd.Parameters["@check"].Value = f.FileName;
-                object? res = checkCmd.ExecuteScalar();
-
-                if(res != null){
-                    // Console.WriteLine(f.FileName + " already exists in directory. Skipping...");
-                    continue;
-                }
-
-                string ext = Path.GetExtension(f.FileName).ToLower();
-
-                string? safeFileName = Path.GetFileName(f.FileName);
+                string safeFileName = Path.GetFileName(f.FileName);
                 if(safeFileName.StartsWith(".") || safeFileName.Equals(".database_uuid",StringComparison.OrdinalIgnoreCase)){
                     continue;
                 }
@@ -127,9 +102,7 @@ public class PicturesController : ControllerBase {
                     await f.CopyToAsync(stream);
                 }
 
-                insertCmd.Parameters["@filePath"].Value = savePath;
-                insertCmd.Parameters["@pictureName"].Value = f.FileName;
-                insertCmd.ExecuteNonQuery();
+                imageRepository.Add(savePath, safeFileName);
             }
 
             // Console.WriteLine($"Saved {files.Count} files");

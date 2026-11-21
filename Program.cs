@@ -1,4 +1,3 @@
-using Npgsql;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http.Features;
 namespace PictureStorage;
@@ -6,20 +5,14 @@ namespace PictureStorage;
 public class Program {
     private static string? s_fsDestination;
 
-    public static string? connectionString;
-
     public static void Main(string[] args) {
         var builder = WebApplication.CreateBuilder(args);
-        // connectionString = builder.Configuration.GetConnectionString("PictureDB");
-        connectionString = builder.Configuration.GetConnectionString("PostgresDB");
-        if(connectionString == null){
-            throw new Exception("Database not found");
-        }
+        string connectionString = builder.Configuration.GetConnectionString("PostgresDB")
+            ?? throw new InvalidOperationException("Connection string 'PostgresDB' is not configured. Set ConnectionStrings__PostgresDB.");
 
-        string? folder = builder.Configuration.GetValue<string>("MainFolder");
-        if(folder == null) throw new Exception("Main folder not found");
-
-        s_fsDestination = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal),folder);
+        string folder = builder.Configuration.GetValue<string>("MainFolder")
+            ?? throw new InvalidOperationException("MainFolder is not configured.");
+        s_fsDestination = Path.GetFullPath(folder);
 
         builder.Services.AddCors(options => {
                 options.AddPolicy("AllowAll", policy =>{
@@ -33,7 +26,7 @@ public class Program {
 
         builder.Services.AddAuthorization();
         
-        builder.Services.AddScoped<IImageRepository,ImageRepositoryDB>();
+        builder.Services.AddScoped<IImageRepository>(_ => new ImageRepositoryDB(connectionString));
 
         builder.Services.Configure<FormOptions>(options =>{
                 options.MultipartBodyLengthLimit = 524288000;
@@ -46,7 +39,7 @@ public class Program {
 
         var app = builder.Build();
         app.UseStaticFiles(new StaticFileOptions{
-                FileProvider = new PhysicalFileProvider(folder),
+                FileProvider = new PhysicalFileProvider(s_fsDestination),
                 RequestPath = "/static"
                 });
 
